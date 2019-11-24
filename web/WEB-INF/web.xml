@@ -31,7 +31,7 @@
     </session-config>
     <welcome-file-list>
         <welcome-file>
-            FormPageLogin.html
+            Login.jsp
         </welcome-file>
     </welcome-file-list> 
     <Alias>192.168.0.28</Alias> <!-- Accessible sur le même réseau en donnant l'adresse ici (a changer quand changement de réseau) --> 
