@@ -34,5 +34,8 @@
             Login.jsp
         </welcome-file>
     </welcome-file-list> 
+    <listener>
+        <listener-class> ServletsUtiles.SessionTimeOut</listener-class>
+    </listener>
     <Alias>192.168.0.28</Alias> <!-- Accessible sur le même réseau en donnant l'adresse ici (a changer quand changement de réseau) --> 
 </web-app>

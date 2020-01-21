@@ -5,6 +5,8 @@
  */
 package ServletsUtiles;
 
+import CHECKCARP.ReponseProtocolCard;
+import CHECKCARP.RequeteProtocolCard;
 import CHECKINAP.ReponseProtocol;
 import CHECKINAP.RequeteProtocol;
 import EBOOP.ReponseEBOOP;
@@ -105,6 +107,7 @@ public class Servlet extends HttpServlet {
                             if (rep2.getCode() == ReponseEBOOP.LISTE_OK) {
                                 session.setAttribute("crossingList", rep2.getCharge()); // add list crossings to session 
                                 session.setAttribute("problemBuy", ""); // problemBuy will be needed later 
+                                session.setAttribute("boutonstring", "");
                                 request.setAttribute("session", session); // send session to ChooseBooking 
                             }
                             cartElements.clear(); // we clear the chosen crossings 
@@ -209,6 +212,7 @@ public class Servlet extends HttpServlet {
                                 HttpSession session = request.getSession(true); 
                                 session.setAttribute("crossingList", rep2.getCharge()); // add crossing list to session  
                                 session.setAttribute("problemBuy", ""); // needed later 
+                                session.setAttribute("boutonstring", "");
                                 request.setAttribute("session", session); // sending session with request to ChooseBooking 
                             }
                             cartElements.clear();
@@ -222,6 +226,96 @@ public class Servlet extends HttpServlet {
                 }
             }
             else if(action.equals("Add to cart")) // ask to add element to the cart 
+            { 
+                if(isAuthenticated(request)) {
+                    HttpSession session = request.getSession(true); // creating session 
+                    MemberDataCenter mdc = (MemberDataCenter)session.getAttribute("member"); // get the client 
+
+                    String test = request.getParameter("Id");System.out.println("test char 0 : " + test.charAt(0)); 
+                    if("-".equals(test.charAt(0)))
+                    {
+                        RequeteEBOOP req = new RequeteEBOOP(RequeteEBOOP.REMOVE_FROM_CART, request.getParameter("Id")); 
+                        Network n = new Network();
+                        cSock = n.Init(); 
+                        n.SendRequest(cSock, req); // ask to add chosen crossing to cart
+
+                        ReponseEBOOP rep = null;
+                        try {
+                            ois = new ObjectInputStream(cSock.getInputStream()); 
+                            rep = (ReponseEBOOP)ois.readObject();
+                            System.out.println("<Add To Cart> *** Reponse reçue");
+
+                            String StrBouton="";
+                            if (rep.getCode() == ReponseEBOOP.REMOVE_OK) { 
+                                cartElements.add(request.getParameter("Id")); // add chosen crossing to a list of chosen crossing (if we choose some others) 
+                                for(int i=0; i<cartElements.size()-1;i++)
+                                {
+                                    StrBouton += cartElements.get(i)+"#"; //YOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                                }
+                                session.setAttribute("boutonstring", StrBouton);
+                                session.setAttribute("crossingList", session.getAttribute("crossingList")); // add list to session 
+                                session.setAttribute("member", mdc);
+
+                                session.setAttribute("problemBuy", ""); // nothing to say
+                                request.setAttribute("session", session); // sending session with request to ChooseBooking 
+                                RequestDispatcher rd = sc.getRequestDispatcher("/ChooseBooking.jsp"); 
+                                rd.forward(request, response);
+                            }
+                        }
+                        catch(Exception e) {
+                            System.out.println("<Add To Cart> " + e.getMessage());
+                        }
+                    }
+                    else
+                    {
+                        RequeteEBOOP req = new RequeteEBOOP(RequeteEBOOP.ADD_CART, request.getParameter("Id")); 
+                        Network n = new Network();
+                        cSock = n.Init(); 
+                        n.SendRequest(cSock, req); // ask to add chosen crossing to cart 
+
+                        ReponseEBOOP rep = null;
+                        try {
+                            ois = new ObjectInputStream(cSock.getInputStream()); 
+                            rep = (ReponseEBOOP)ois.readObject();
+                            System.out.println("<Add To Cart> *** Reponse reçue");
+
+                            String StrBouton="";
+                            if (rep.getCode() == ReponseEBOOP.ADD_CART_OK) { 
+                                cartElements.add(request.getParameter("Id")); // add chosen crossing to a list of chosen crossing (if we choose some others) 
+                                for(int i=0; i<cartElements.size()-1;i++)
+                                {
+                                    StrBouton += cartElements.get(i)+"#"; //YOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                                }
+                                session.setAttribute("boutonstring", StrBouton);
+                                session.setAttribute("crossingList", session.getAttribute("crossingList")); // add list to session 
+                                session.setAttribute("member", mdc);
+
+                                session.setAttribute("problemBuy", ""); // nothing to say
+                                request.setAttribute("session", session); // sending session with request to ChooseBooking 
+                                RequestDispatcher rd = sc.getRequestDispatcher("/ChooseBooking.jsp"); 
+                                rd.forward(request, response);
+                            }
+                            else if (rep.getCode() == ReponseEBOOP.ADD_CART_PAS_OK) {
+                                for(int i=0; i<cartElements.size()-1;i++)
+                                {
+                                    StrBouton += cartElements.get(i)+"#";
+                                }
+                                session.setAttribute("boutonstring", StrBouton); //YOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                                session.setAttribute("crossingList", session.getAttribute("crossingList")); // add list to session 
+                                session.setAttribute("member", mdc);
+                                session.setAttribute("problemBuy", "<h4>Add didn't work</h4>"); // message to show in ChooseBooking 
+                                request.setAttribute("session", session); // sending session with request to ChooseBooking 
+                                RequestDispatcher rd = sc.getRequestDispatcher("/ChooseBooking.jsp"); 
+                                rd.forward(request, response);
+                            }
+                        }
+                        catch(Exception e) {
+                            System.out.println("<Add To Cart> " + e.getMessage());
+                        }
+                    }
+                }
+            }
+            /*else if(action.equals("Add to cart")) // ask to add element to the cart 
             { 
                 if(isAuthenticated(request)) {
                     HttpSession session = request.getSession(true); // creating session 
@@ -260,7 +354,7 @@ public class Servlet extends HttpServlet {
                         System.out.println("<Add To Cart> " + e.getMessage());
                     }
                 }
-            }
+            }*/
             else if (action.equals("Buy")) // ask to see the cart 
             { 
                 if(isAuthenticated(request)) {
@@ -373,21 +467,29 @@ public class Servlet extends HttpServlet {
                         mess+=request.getParameter("num")+"#";
                         mess+=request.getParameter("code")+"#"; 
                         mess+=request.getParameter("date")+"#";               
-                        mess+=request.getParameter("prixtot")+"#"; 
+                        mess+=request.getParameter("prixtot")+"#";
                         
-                        RequeteEBOOP req = new RequeteEBOOP(RequeteEBOOP.BUY_CART, mess); 
+                        /*RequeteEBOOP req = new RequeteEBOOP(RequeteEBOOP.BUY_CART, mess); 
                         Network n = new Network();
                         cSock = n.Init(); 
-                        n.SendRequest(cSock, req); // ask to purchase for crossing(s) 
-
-                        ReponseEBOOP rep = null;
+                        n.SendRequest(cSock, req); // ask to purchase for crossing(s) */
+                        RequeteProtocolCard req3 = new RequeteProtocolCard(RequeteProtocolCard.CHECK_CARD2, mess); 
+                        Network n3 = new Network();
+                        cSock = n3.InitOnDemand(); 
+                        n3.SendRequest(cSock, req3); // ask crossings details (from, to, etc) 
+                        
+                        ReponseProtocolCard rep3 = null; 
+                        //ReponseEBOOP rep = null;
                         try {
-                            ois = new ObjectInputStream(cSock.getInputStream()); 
+                            /*ois = new ObjectInputStream(cSock.getInputStream()); 
                             rep = (ReponseEBOOP)ois.readObject(); 
-                            System.out.println("<Finalise> *** Reponse reçue");
+                            System.out.println("<Finalise> *** Reponse reçue");*/
+                            ois = new ObjectInputStream(cSock.getInputStream()); 
+                            rep3 = (ReponseProtocolCard)ois.readObject();
+                            System.out.println("<Buy> *** Reponse reçue");
 
-                            if (rep.getCode() == ReponseEBOOP.BUY_CART_BAD_INFO) {
-                                String message = rep.getCharge(); // get message to send 
+                            if (rep3.getCode() == ReponseProtocolCard.CARTEPASOK){ //(rep.getCode() == ReponseEBOOP.BUY_CART_BAD_INFO) {
+                                String message = rep3.getChargeUtile(); // get message to send 
 
                                 session.setAttribute("crossingList", session.getAttribute("crossingList")); // add list to session 
                                 session.setAttribute("member", mdc);
@@ -398,10 +500,10 @@ public class Servlet extends HttpServlet {
                                 RequestDispatcher rd = sc.getRequestDispatcher("/Result.jsp"); 
                                 rd.forward(request, response);
                             }
-                            if (rep.getCode() == ReponseEBOOP.BUY_CART_OK) {
-                                String message = rep.getCharge(); 
+                            if (rep3.getCode() == ReponseProtocolCard.CARTEOK){ //(rep.getCode() == ReponseEBOOP.BUY_CART_OK) {
+                                String message = rep3.getChargeUtile(); 
                                 String mess2 = ""; 
-                                
+
                                 String elem = session.getAttribute("chosenElements").toString(); // get the liste of chosen crossing 
                                 MemberDataCenter md = (MemberDataCenter)session.getAttribute("member"); // get client 
                                 String mat = session.getAttribute("PrixEtMatricule").toString(); // get price and matricule 
@@ -444,8 +546,8 @@ public class Servlet extends HttpServlet {
                                 RequestDispatcher rd = sc.getRequestDispatcher("/Result.jsp"); 
                                 rd.forward(request, response);                            
                             }
-                            if (rep.getCode() == ReponseEBOOP.BUY_CART_BAD_MONEY) {
-                                String message = rep.getCharge(); 
+                            if (rep3.getCode()== ReponseProtocolCard.CODEPASOK){ //(rep.getCode() == ReponseEBOOP.BUY_CART_BAD_MONEY) {
+                                String message = rep3.getChargeUtile(); 
 
                                 session.setAttribute("crossingList", session.getAttribute("crossingList")); // add list to session 
                                 session.setAttribute("member", mdc);
